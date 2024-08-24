@@ -1,70 +1,107 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import BetButtons from "@/components/BetButtons ";
+import BettingPopup from "@/components/BettingPopup ";
+import BudgetDisplay from "@/components/BudgetDisplay";
+import DiceRoller from "@/components/DiceRoller ";
+import PrimaryButton from "@/components/PrimaryButton";
+import RestartPopup from "@/components/RestartPopup";
+import ResultMessage from "@/components/ResultMessage ";
+import React, { useEffect, useState } from "react";
+import { View, StyleSheet, Text, Button } from "react-native";
 
 export default function HomeScreen() {
+  const [dice, setDice] = useState([1, 1, 1]);
+  const [result, setResult] = useState("");
+  const [message, setMessage] = useState("");
+  const [total, setTotal] = useState(0);
+  const [isRolling, setIsRolling] = useState(false);
+  const [isPopupVisible, setIsPopupVisible] = useState(false);
+  const [isPopupRestartVisible, setIsPopupRestartVisible] = useState(false);
+  const [playerBet, setPlayerBet] = useState("");
+  const [budget, setBudget] = useState(0);
+  const rollDice = () => {
+    const newDice = [
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+      Math.floor(Math.random() * 6) + 1,
+    ];
+    setDice(newDice);
+    return newDice;
+  };
+
+  const getResult = (dice: number[]) => {
+    const total = dice.reduce((acc, curr) => acc + curr, 0);
+    setTotal(total);
+
+    if (total >= 4 && total <= 10) {
+      return "Xỉu";
+    } else if (total >= 11 && total <= 17) {
+      return "Tài";
+    }
+  };
+
+  const handleBet = (betType: string) => {
+    setPlayerBet(betType);
+    setIsPopupVisible(true);
+  };
+
+  const handleBetAmount = async (amount: number) => {
+    setIsPopupVisible(false);
+    playGame(playerBet, amount);
+  };
+
+  const playGame = (playerBet: string, amount: number) => {
+    setIsRolling(true);
+    setMessage("Đang lắc...");
+    setResult("");
+    setTimeout(() => {
+      const newDice = rollDice();
+      const gameResult = getResult(newDice);
+      if (!gameResult) return;
+      setResult(gameResult);
+      setIsRolling(false);
+
+      if (playerBet === gameResult.toLowerCase()) {
+        setBudget((prevBudget) => prevBudget + amount);
+        setMessage("Ngon!!! Đánh tiếp.");
+      } else {
+        setBudget((prevBudget) => prevBudget - amount);
+        setMessage("Ngã ở đâu đứng lên ở đó!!!");
+      }
+    }, 1000);
+  };
+
+  const setupBudged = (money: number) => {
+    setBudget((prevBudget) => prevBudget + money);
+  };
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <PrimaryButton onPress={() => setIsPopupRestartVisible(true)}>
+        Bốc bát{" "}
+      </PrimaryButton>
+      <BudgetDisplay budget={budget} />
+      <DiceRoller dice={dice} isRolling={isRolling} />
+      <BetButtons onBet={handleBet} budget={budget} />
+      <BettingPopup
+        isVisible={isPopupVisible}
+        onBetAmount={handleBetAmount}
+        onCancel={() => setIsPopupVisible(false)}
+        budget={budget}
+      />
+      <RestartPopup
+        isVisible={isPopupRestartVisible}
+        setupBudged={setupBudged}
+        onCancel={() => setIsPopupRestartVisible(false)}
+      />
+      <ResultMessage message={message} />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
   },
 });
